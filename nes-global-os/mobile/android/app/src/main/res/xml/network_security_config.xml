@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- The app only talks to your own NES server through Tailscale (WireGuard-encrypted).
-     HTTPS via `tailscale serve` is recommended; plain http is allowed so a 100.x Tailscale IP also works. -->
-<network-security-config>
-    <base-config cleartextTrafficPermitted="true">
-        <trust-anchors><certificates src="system" /></trust-anchors>
-    </base-config>
-</network-security-config>

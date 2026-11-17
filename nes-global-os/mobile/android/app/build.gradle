@@ -5,15 +5,23 @@ android {
     compileSdk = rootProject.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion : 34
     defaultConfig {
         applicationId "com.nadireskills.nesteam"
+<<<<<<< HEAD
         minSdkVersion rootProject.hasProperty('minSdkVersion') ? rootProject.ext.minSdkVersion : 22
         targetSdkVersion rootProject.hasProperty('targetSdkVersion') ? rootProject.ext.targetSdkVersion : 34
         versionCode (System.getenv("NES_VERSION_CODE") ?: "1") as Integer
         versionName System.getenv("NES_VERSION_NAME") ?: "1.0.0"
+=======
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+>>>>>>> 8c71737 (Fix Android project)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+<<<<<<< HEAD
     signingConfigs {
         release {
             def ks = System.getenv("NES_KEYSTORE_FILE")
@@ -25,11 +33,10 @@ android {
             }
         }
     }
+=======
+>>>>>>> 8c71737 (Fix Android project)
     buildTypes {
         release {
-            if (System.getenv("NES_KEYSTORE_FILE")) {
-                signingConfig signingConfigs.release
-            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
