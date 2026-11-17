@@ -1,69 +1,23 @@
-apply plugin: 'com.android.application'
-
-android {
-    namespace = "com.nadireskills.nesteam"
-    compileSdk = 34
-    defaultConfig {
-        applicationId "com.nadireskills.nesteam"
-        minSdkVersion 22
-        targetSdkVersion 34
-        versionCode (System.getenv("NES_VERSION_CODE") ?: "1") as Integer
-        versionName System.getenv("NES_VERSION_NAME") ?: "1.0.0"
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        aaptOptions {
-             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
-        }
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
     }
-    signingConfigs {
-        release {
-            def ks = System.getenv("NES_KEYSTORE_FILE")
-            if (ks) {
-                storeFile file(ks)
-                storePassword System.getenv("NES_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("NES_KEY_ALIAS")
-                keyPassword System.getenv("NES_KEY_PASSWORD")
-            }
-        }
-    }
-    buildTypes {
-        release {
-            if (System.getenv("NES_KEYSTORE_FILE")) {
-                signingConfig signingConfigs.release
-            }
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
-        debug {
-            minifyEnabled false
-        }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.13.0'
+        classpath 'com.google.gms:google-services:4.4.4'
     }
 }
 
-repositories {
-    flatDir{
-        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+apply from: "variables.gradle"
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
     }
 }
 
-dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
-    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
-    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
-    implementation project(':capacitor-android')
-    testImplementation "junit:junit:$junitVersion"
-    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
-    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
-    implementation project(':capacitor-cordova-android-plugins')
-}
-
-apply from: 'capacitor.build.gradle'
-
-try {
-    def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
-    }
-} catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+task clean(type: Delete) {
+    delete rootProject.buildDir
 }
