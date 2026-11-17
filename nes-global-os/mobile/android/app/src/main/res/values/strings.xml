@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NES Team</string>
+    <string name="title_activity_main">NES Team</string>
+    <string name="package_name">com.nadireskills.nesteam</string>
+    <string name="custom_url_scheme">com.nadireskills.nesteam</string>
+</resources>

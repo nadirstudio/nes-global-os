@@ -1,0 +1,78 @@
+# NES GLOBAL OS — office server stack (Ubuntu Server LTS + Docker Compose).
+# Only Caddy publishes ports. PostgreSQL and Redis are reachable only on the internal network.
+name: nesos
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nesos
+      POSTGRES_USER: nesos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+    volumes: [db_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nesos -d nesos"]
+      interval: 10s
+      retries: 6
+    networks: [internal]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redis_data:/data]
+    networks: [internal]
+
+  api:
+    build: ../backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NES_DATABASE_URL: postgresql+psycopg://nesos:${POSTGRES_PASSWORD}@db:5432/nesos
+      NES_REDIS_URL: redis://redis:6379/0
+      NES_FILES_DIR: /data/files
+    volumes: [files_data:/data/files]
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 30s
+      retries: 5
+    networks: [internal]
+
+  worker:
+    build: ../backend
+    restart: unless-stopped
+    command: ["python", "-m", "app.worker"]
+    env_file: .env
+    environment:
+      NES_DATABASE_URL: postgresql+psycopg://nesos:${POSTGRES_PASSWORD}@db:5432/nesos
+      NES_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      api: { condition: service_healthy }
+    networks: [internal]
+
+  web:
+    build: ../frontend
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      NES_SITE_ADDRESS: ${NES_SITE_ADDRESS:-:80}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [api]
+    networks: [internal]
+
+volumes:
+  db_data:
+  files_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:

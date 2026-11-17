@@ -1,0 +1,89 @@
+# Builds the NES Team Android app (APK) for private installation — no Play Store.
+# Runs on every push that changes mobile/, or manually: GitHub → Actions → "NES Team APK" → Run workflow.
+# The APK appears under the run's "Artifacts". Pushing a tag like  team-v1.0.1  also creates a GitHub Release.
+name: NES Team APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ["mobile/**", ".github/workflows/nes-team-apk.yml"]
+    tags: ["team-v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - uses: android-actions/setup-android@v4
+
+      - name: Install and build the web app
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          npx cap sync android
+
+      - name: Prepare signing key (from repository secrets)
+        id: sign
+        env:
+          KEYSTORE_B64: ${{ secrets.NES_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/nes-team.jks"
+            echo "file=$RUNNER_TEMP/nes-team.jks" >> "$GITHUB_OUTPUT"
+            echo "Signing with the NES release key."
+          else
+            echo "::warning::No NES_KEYSTORE_BASE64 secret — building a DEBUG APK. Debug builds can't be updated in place; add the signing secrets (see mobile/README.md)."
+          fi
+
+      - name: Build APK
+        working-directory: mobile/android
+        env:
+          NES_VERSION_CODE: ${{ github.run_number }}
+          NES_VERSION_NAME: 1.0.${{ github.run_number }}
+          NES_KEYSTORE_FILE: ${{ steps.sign.outputs.file }}
+          NES_KEYSTORE_PASSWORD: ${{ secrets.NES_KEYSTORE_PASSWORD }}
+          NES_KEY_ALIAS: ${{ secrets.NES_KEY_ALIAS }}
+          NES_KEY_PASSWORD: ${{ secrets.NES_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          if [ -n "$NES_KEYSTORE_FILE" ]; then
+            ./gradlew --no-daemon assembleRelease
+            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/NES-Team-1.0.${{ github.run_number }}.apk"
+          else
+            ./gradlew --no-daemon assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/NES-Team-1.0.${{ github.run_number }}-debug.apk"
+          fi
+          ls -la "$GITHUB_WORKSPACE"/*.apk
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: NES-Team-APK-${{ github.run_number }}
+          path: ${{ github.workspace }}/*.apk
+          retention-days: 30
+
+      - name: Publish release (tags only)
+        if: startsWith(github.ref, 'refs/tags/team-v')
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" ./*.apk --title "NES Team ${GITHUB_REF_NAME#team-v}" --notes "Internal build — install on staff phones only."
