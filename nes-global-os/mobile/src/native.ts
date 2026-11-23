@@ -2,6 +2,7 @@
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 import { Geolocation } from "@capacitor/geolocation";
+import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { Browser } from "@capacitor/browser";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { BiometricAuth, BiometryError, BiometryErrorType } from "@aparajita/capacitor-biometric-auth";
@@ -33,6 +34,30 @@ export async function getLocation(): Promise<Fix> {
     if (/denied|permission/i.test(msg)) throw new Error("Location permission is off. Allow it for NES Team and try again.");
     if (/timeout|unavailable/i.test(msg)) throw new Error("Couldn't get your location. Turn on GPS/location and try again.");
     throw new Error("Couldn't get your location: " + msg);
+  }
+}
+
+// ---------------------------------------------------------------- camera
+/** Opens the camera and returns a data URL (base64) of the photo taken. */
+export async function takePhoto(): Promise<string> {
+  if (isNative) {
+    let perm = await Camera.checkPermissions();
+    if (perm.camera !== "granted") perm = await Camera.requestPermissions({ permissions: ["camera"] });
+    if (perm.camera !== "granted") throw new Error("Camera permission is off. Allow it in Settings → Apps → NES Team → Permissions.");
+  }
+  try {
+    const photo = await Camera.getPhoto({
+      resultType: CameraResultType.DataUrl,
+      source: CameraSource.Camera,
+      quality: 80,
+    });
+    if (!photo.dataUrl) throw new Error("No photo captured.");
+    return photo.dataUrl;
+  } catch (e) {
+    const msg = (e as Error).message || "";
+    if (/denied|permission/i.test(msg)) throw new Error("Camera permission is off. Allow it for NES Team and try again.");
+    if (/cancel/i.test(msg)) throw new Error("Photo capture cancelled.");
+    throw new Error("Couldn't take photo: " + msg);
   }
 }
 
