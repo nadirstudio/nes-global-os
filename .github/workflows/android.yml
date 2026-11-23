@@ -24,11 +24,9 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Locate Project, Build Web Assets & Sync Capacitor
+      - name: Build Web Assets & Sync Capacitor
+        working-directory: nes-global-os/mobile
         run: |
-          PKG_DIR=$(find . -maxdepth 4 -name "package.json" -not -path "*/node_modules/*" | head -n 1 | xargs dirname)
-          echo "Found package.json in: $PKG_DIR"
-          cd "$PKG_DIR"
           npm install
           npm run build
           npx cap sync android
